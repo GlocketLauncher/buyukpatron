@@ -61,20 +61,43 @@ async def meslek(ctx, *, meslek_adi: str):
         await ctx.author.send(f"❌ Bir hata oluştu: {e}")
 
 
-job = ["iş","job"]
+job = ["iş","job","işler","işlerim",",işim"]
 
 @bot.listen()
 async def on_message(message):
-    if message.author != bot.user:
-        content = message.content.lower()
-        for kelime in job:
-            if kelime in content:
-                randomMem = secrets.choice(os.listdir('meme'))
-                with open(f"meme/{randomMem}","rb") as f:
-                    pic = discord.File(f)
+    if message.author == bot.user:
+        return
 
-                    await message.channel.send(file = pic)
-                    break
+    content = message.content.lower()
+
+    # JOB
+    job = ["iş", "job", "işler", "işlerim", "işim","işe"]
+    if any(kelime in content for kelime in job):
+        randomMem = secrets.choice(os.listdir("meme"))
+        with open(f"meme/{randomMem}", "rb") as f:
+            pic = discord.File(f)
+            await message.channel.send(file=pic)
+        return
+
+    # SNAKE
+    snake = ["görünmez", "invisible", "gorunmez", "snake", "solid snake"]
+    if any(kelime in content for kelime in snake):
+        randomMem = secrets.choice(os.listdir("invisible"))
+        with open(f"invisible/{randomMem}", "rb") as f:
+            pic = discord.File(f)
+            await message.channel.send(file=pic)
+        return
+
+    # SUNDOWNER
+    sundowner = ["invincible", "yok edilemez", "ölümsüz", "sundowner"]
+    if any(kelime in content for kelime in sundowner):
+        randomMem = secrets.choice(os.listdir("invincible"))
+        with open(f"invincible/{randomMem}", "rb") as f:
+            pic = discord.File(f)
+            await message.channel.send(file=pic)
+        return
+
+
 
 
 
