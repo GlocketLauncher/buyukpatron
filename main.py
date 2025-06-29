@@ -1,11 +1,13 @@
 import discord
 from discord.ext import commands
 from config import token
-from ai import meslek, meslek_bilgi  # meslek(ozellikler) + meslek_bilgi(meslek_adi)
+from ai import meslek_oner,meslek_aciklama
 from personality import sorular, en_baskin_ozellik
-import random
+from data import DataBase
 import os
 import secrets
+
+db = DataBase()
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -25,31 +27,37 @@ async def analiz(ctx):
         cevaplar = []
 
         for s in sorular:
-            await dm.send(f"**{s['soru']}**\n a) {s['secenekler']['a']} \n b) {s['secenekler']['b']}")
+            await dm.send(f"**{s['soru']}**\n a) {s['secenekler']['a']}\n b) {s['secenekler']['b']}")
 
             def check(m):
                 return m.author == ctx.author and m.channel == dm and m.content.lower() in ["a", "b"]
 
-            cevap = await bot.wait_for("message", check=check)
-            cevaplar.append(s["secenekler"][cevap.content.lower()])
+            mesaj = await bot.wait_for("message", check=check)
+            cevaplar.append(s["secenekler"][mesaj.content.lower()])
 
         ozellikler = en_baskin_ozellik(cevaplar)
         await dm.send(f"🔍 Kişilik özelliklerin: {', '.join(ozellikler)}")
 
-        aciklama = await meslek(ozellikler)
+        aciklama = await meslek_oner(ozellikler)
         await dm.send(f"🎯 Meslek önerisi:\n{aciklama}")
 
+        eski = db.getir(str(ctx.author.id))
+        if eski:
+            await dm.send(f"📂 Daha önce analiz yapmışsın!\n🧠 Özellikler: {eski[2]}\n🎯 Meslek: {eski[3]}\n📅 Tarih: {eski[4]}")
+
+        db.kaydet(str(ctx.author.id), cevaplar, ozellikler, aciklama)
+
     except Exception as e:
-        await ctx.author.send(f"❌ Bir hata oluştu: {e}")
+        await ctx.author.send(f"❌ Bir hata oluştu:\n{e}")
 
 @bot.command()
 async def meslek(ctx, *, meslek_adi: str):
     try:
         await ctx.message.delete()
         dm = await ctx.author.create_dm()
-        await dm.send(f"📌 Bilgi istenen meslek: **{meslek_adi}**\n⏳ Bilgi getiriliyor...")
+        await dm.send(f"📌 **{meslek_adi}** hakkında bilgi getiriliyor...")
 
-        aciklama = await meslek_bilgi(meslek_adi)
+        aciklama = await meslek_aciklama(meslek_adi=meslek_adi)
 
         if len(aciklama) <= 2000:
             await dm.send(f"📖 {meslek_adi.upper()} hakkında bilgi:\n{aciklama}")
@@ -58,10 +66,14 @@ async def meslek(ctx, *, meslek_adi: str):
                 await dm.send(aciklama[i:i+1990])
 
     except Exception as e:
-        await ctx.author.send(f"❌ Bir hata oluştu: {e}")
+        await ctx.author.send(f"❌ Bir hata oluştu:\n{e}")
 
-
-job = ["iş","job","işler","işlerim",",işim"]
+# Kelime listeleri
+kelimeler = {
+    "meme": ["iş", "job", "işler", "işlerim", "işim", "işe"],
+    "invisible": ["görünmez", "invisible", "gorunmez", "snake", "solid snake"],
+    "invincible": ["invincible", "yok edilemez", "ölümsüz", "sundowner"]
+}
 
 @bot.listen()
 async def on_message(message):
@@ -70,35 +82,14 @@ async def on_message(message):
 
     content = message.content.lower()
 
-    # JOB
-    job = ["iş", "job", "işler", "işlerim", "işim","işe"]
-    if any(kelime in content for kelime in job):
-        randomMem = secrets.choice(os.listdir("meme"))
-        with open(f"meme/{randomMem}", "rb") as f:
-            pic = discord.File(f)
-            await message.channel.send(file=pic)
-        return
-
-    # SNAKE
-    snake = ["görünmez", "invisible", "gorunmez", "snake", "solid snake"]
-    if any(kelime in content for kelime in snake):
-        randomMem = secrets.choice(os.listdir("invisible"))
-        with open(f"invisible/{randomMem}", "rb") as f:
-            pic = discord.File(f)
-            await message.channel.send(file=pic)
-        return
-
-    # SUNDOWNER
-    sundowner = ["invincible", "yok edilemez", "ölümsüz", "sundowner"]
-    if any(kelime in content for kelime in sundowner):
-        randomMem = secrets.choice(os.listdir("invincible"))
-        with open(f"invincible/{randomMem}", "rb") as f:
-            pic = discord.File(f)
-            await message.channel.send(file=pic)
-        return
-
-
-
-
+    for klasor, anahtarlar in kelimeler.items():
+        if any(kelime in content for kelime in anahtarlar):
+            try:
+                dosya = secrets.choice(os.listdir(klasor))
+                with open(os.path.join(klasor, dosya), "rb") as f:
+                    await message.channel.send(file=discord.File(f))
+            except Exception as e:
+                print(f"❌ Meme gönderilemedi: {e}")
+            break
 
 bot.run(token)

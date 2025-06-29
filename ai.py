@@ -6,9 +6,10 @@ client = openai.OpenAI(
     base_url="https://api.groq.com/openai/v1"
 )
 
-
-
-async def meslek_bilgi(meslek_adi):
+async def meslek_aciklama(meslek_adi: str) -> str:
+    """
+    Girilen meslek hakkında Türkçe açıklama üretir.
+    """
     prompt = (
         f"Sen bir kariyer rehberisin. Bana '{meslek_adi}' mesleği hakkında Türkçe bilgi ver. "
         f"Bu meslek ne iş yapar, hangi beceriler gerekir, nasıl başlanır ve geleceği nasıldır? "
@@ -25,25 +26,16 @@ async def meslek_bilgi(meslek_adi):
         return response.choices[0].message.content
     except Exception as e:
         return f"❌ GPT açıklaması alınamadı: {e}"
- 
 
-
-
-
-
-
-
-
-
-
-async def meslek(ozellikler: list):
+async def meslek_oner(ozellikler: list) -> str:
+    """
+    Verilen kişilik özelliklerine göre meslek önerisi üretir.
+    """
     prompt = (
         f"Bir kariyer koçusun. Kişinin kişilik özellikleri şunlar: {', '.join(ozellikler)}.\n"
-        f"Bu kişilik tipine uygun 2-3 meslek öner. Her biri için neden uygun olduğunu motive edici biçimde TÜRKÇE açıklayan kısa bir TÜRKÇE metin yaz."
+        f"Bu kişilik tipine uygun 2-3 meslek öner. Her biri için neden uygun olduğunu motive edici biçimde "
+        f"TÜRKÇE açıklayan kısa bir TÜRKÇE metin yaz."
     )
-    
-    
-
 
     try:
         response = client.chat.completions.create(
